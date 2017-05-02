@@ -24,7 +24,13 @@ typedef struct Arguments{
     int value;
     int thread_id;
     struct List *head;
-};
+}Arguments;
+
+
+pthread_mutex_t mutex;
+sem_t sem;
+
+
 
 void display(struct List *element){
     
@@ -37,7 +43,7 @@ void display(struct List *element){
     
 }
 
-void push(struct List *head, int value){
+void push_f(struct List *head, int value){
     struct List *newElement;
     struct List *cursor = head;
     newElement = (struct List*)malloc(sizeof(struct List));
@@ -52,34 +58,16 @@ void push(struct List *head, int value){
     
 }
 
-void popThread(struct Arguments arg){
-    //sem_wait(&(arg.sem));
-    int i=0;
-    for(i=0; i<8; i++);{
-        //printf("watek %d wlasnie zdjal: %d", arg.thread_id, pop(arg.head));
-        printf("watek  wlasnie zdjal: ");
-    }
-}
-
-void pushThread(struct Arguments arg){
-    //sem_wait(&(arg.sem));
-    //push(arg.head, arg.value);
-    //sem_post(&(arg.sem));
-    int i=0;
-    for(i=0; i<16; i++){
-        printf("watek %d wlasnie wlozyl: %d", arg.thread_id, arg.value );
-    }
-}
-
-int pop(struct List *head){
+int pop_f(struct List *head){
 
     
         struct List *cursor = head;
-
+        
         while(cursor->next){
             cursor = cursor->next;
         }
 
+        if(cursor != NULL){
         int return_value = cursor->value;
        
         if(return_value == -1){
@@ -87,10 +75,41 @@ int pop(struct List *head){
             // zgodnie z zalozeniem nie usuwam
             return -1; 
         }else{
-            free(cursor);
+            
+                free(cursor);
+            
             return return_value;
         }
+    }
 }
+
+void* popThread(void  *arg){
+    
+    int i=0;
+    struct List *k = (struct List*) arg;
+    
+    sem_wait(&sem);
+    pthread_mutex_lock(&mutex);
+        printf("watek wlasnie zdjal: %d\n", pop_f(k));
+    pthread_mutex_unlock(&mutex);
+    
+}
+
+void* pushThread(void *arg){
+    
+    int i=0;
+    int val = rand()%100;
+    struct List *k = (struct List*) arg;
+    
+    pthread_mutex_lock(&mutex);
+        printf("watek wlasnie wlozyl: %d\n", val );
+        push_f(k, val );
+    pthread_mutex_unlock(&mutex);
+    sem_post(&sem);
+
+}
+
+
 
 
 // TO DO:
@@ -101,38 +120,52 @@ int main(){
 
 
     struct List *lista;
-    struct Arguments *arg;
     sem_t sem;
     pthread_t tid[threds_num];
-    pthread_data_t data[threds_num];
-    int sem_status, i;
-
-
+    sem_init(&sem, 0, 0);
+    int sem_status, i,j,k;
     //glowa listy
     lista = (struct List*)malloc(sizeof(struct List));
     lista->value = -1;
+    time_t tt;
+    int seed = time (&tt);
+    srand(seed);
 
-    sem_status = sem_init(&sem, 0, 1);
+
+    sem_status = sem_init(&sem, 0, 0);
 
     if(sem_status == -1){
         printf("bald tworzenia semafora");
         return -1;
     }
 
-    arg = (struct Arguments*)malloc(sizeof(struct Arguments) * threds_num);
-    arg->sem = sem;
-    arg->head = lista;
 
-    for(i=0; i<threds_num; i++){
-        (arg+i)->thread_id = i;
-        pthread_create(&tid, NULL, popThread, (arg+i));
+    for(i=0; i<30; i++){
+        
+        pthread_create( &tid[0], NULL, pushThread, (void *)lista);
+        
+    }    
 
+
+    k =1;
+    for(i=0; i<30; i++){
+                
+        
+        pthread_create( &tid[k], NULL, popThread, (void *) lista);
+        
+        k++;
+        if(k>threds_num) k = 1;
     }
 
+// printf("-------------------------\n");
+// display(lista);
 
-    pthread_join(tid, NULL);
+    // pthread_join(tid[0], NULL);
+    for (i=0; i<threds_num; i++){
+        pthread_join(tid[i], NULL);
+    }
 
     sem_destroy(&sem);
-    free(arg);
+    
     free(lista);
 }
