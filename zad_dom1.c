@@ -49,6 +49,10 @@ int pop(struct List *head){
 }
 
 
+// TO DO:
+// - iles watkow (min 3)
+// - semafor/sekcja krytyczna, takie tam
+
 int main(){
 
 
