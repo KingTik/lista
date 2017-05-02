@@ -6,7 +6,7 @@ typedef struct List{
     int value;
     struct List *next;
 
-};
+}List;
 
 void display(struct List *element){
     
