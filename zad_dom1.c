@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include <unistd.h>
 
 
 /**
@@ -13,25 +14,21 @@ nie mozna usunac glowy
 
 #define threds_num 3
 
+//Node
 typedef struct List{
     int value;
     struct List *next;
 
 }List;
 
-typedef struct Arguments{
-    sem_t sem;
-    int value;
-    int thread_id;
-    struct List *head;
-}Arguments;
+
 
 
 pthread_mutex_t mutex;
 sem_t sem;
 
 
-
+// wyswietlanie listy
 void display(struct List *element){
     
     while(element){
@@ -43,12 +40,14 @@ void display(struct List *element){
     
 }
 
+//wstawienie elementu na koniec listy
 void push_f(struct List *head, int value){
     struct List *newElement;
     struct List *cursor = head;
     newElement = (struct List*)malloc(sizeof(struct List));
     newElement->value = value;
     
+    // przejscie na koniec listy
     while(cursor->next){
         
         cursor = cursor->next;
@@ -57,64 +56,72 @@ void push_f(struct List *head, int value){
     cursor->next = newElement;
     
 }
-
+//sciagniecie elementu z konca listy
 int pop_f(struct List *head){
 
     
         struct List *cursor = head;
-        
+        struct List *prev;
+        // przejscie na koniec listy
         while(cursor->next){
+            prev = cursor;
             cursor = cursor->next;
+        
         }
 
         if(cursor != NULL){
-        int return_value = cursor->value;
-       
-        if(return_value == -1){
-            // na liscie jest tylko glowa
-            // zgodnie z zalozeniem nie usuwam
-            return -1; 
-        }else{
-            
-                free(cursor);
-            
-            return return_value;
+            int return_value = cursor->value;
+        
+            if(return_value == -1){
+                // na liscie jest tylko glowa
+                // zgodnie z zalozeniem nie usuwam
+                return -1; 
+            }else{
+                
+                    free(cursor);
+                    cursor = NULL;
+                    prev->next = NULL; // SUPER WAZNE 
+                return return_value;
+            }
         }
-    }
 }
 
+// wraper sciagania z listy na potrzeby tworzenia watku
 void* popThread(void  *arg){
     
     int i=0;
     struct List *k = (struct List*) arg;
     
-    sem_wait(&sem);
-    pthread_mutex_lock(&mutex);
-        printf("watek wlasnie zdjal: %d\n", pop_f(k));
-    pthread_mutex_unlock(&mutex);
-    
+    while(1){
+        sem_wait(&sem);
+        pthread_mutex_lock(&mutex);
+            printf("watek wlasnie zdjal: %d\n", pop_f(k));
+        pthread_mutex_unlock(&mutex);
+        sleep(3);
+    }
 }
-
+// wraper sciagania z listy na potrzeby tworzenia watku
 void* pushThread(void *arg){
     
     int i=0;
-    int val = rand()%100;
+    int val ;
     struct List *k = (struct List*) arg;
-    
-    pthread_mutex_lock(&mutex);
-        printf("watek wlasnie wlozyl: %d\n", val );
-        push_f(k, val );
-    pthread_mutex_unlock(&mutex);
-    sem_post(&sem);
-
+    while(1){
+        val = rand()%100;
+        pthread_mutex_lock(&mutex);
+            printf("watek wlasnie wlozyl: %d\n", val );
+            push_f(k, val );
+        pthread_mutex_unlock(&mutex);
+        
+        sem_post(&sem);
+        sleep(1);
+    }
 }
 
 
 
 
-// TO DO:
-// - iles watkow (min 3)
-// - semafor/sekcja krytyczna, takie tam
+
 
 int main(){
 
@@ -140,27 +147,22 @@ int main(){
     }
 
 
-    for(i=0; i<30; i++){
-        
-        pthread_create( &tid[0], NULL, pushThread, (void *)lista);
-        
-    }    
+    // raczej bedzie wkladal niz wyjmowl przez sleepy w funkcajch wrpaerach
 
+    for(i=0; i<threds_num; i++ ){
 
-    k =1;
-    for(i=0; i<30; i++){
-                
-        
-        pthread_create( &tid[k], NULL, popThread, (void *) lista);
-        
-        k++;
-        if(k>threds_num) k = 1;
+        if(i==0){
+           pthread_create( &tid[0], NULL, pushThread, (void *)lista); 
+        }else{
+           pthread_create( &tid[i], NULL, popThread, (void *) lista); 
+        }
+
     }
 
-// printf("-------------------------\n");
-// display(lista);
 
-    // pthread_join(tid[0], NULL);
+  
+
+    //czekanie na watki
     for (i=0; i<threds_num; i++){
         pthread_join(tid[i], NULL);
     }
