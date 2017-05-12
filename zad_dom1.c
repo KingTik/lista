@@ -21,7 +21,7 @@ typedef struct List{
 
 }List;
 
-
+struct List *lista;
 
 
 pthread_mutex_t mutex;
@@ -30,14 +30,15 @@ sem_t sem;
 
 // wyswietlanie listy
 void display(struct List *element){
-    
+    printf("[");
     while(element){
+        
         if(element->value){
-            printf("wartosc -> %d \n", element->value);
+            printf("%d, ", element->value);
         }
         element = element->next;
     }
-    
+    printf("] \n");
 }
 
 //wstawienie elementu na koniec listy
@@ -62,28 +63,28 @@ int pop_f(struct List *head){
     
         struct List *cursor = head;
         struct List *prev;
-        // przejscie na koniec listy
-        while(cursor->next){
-            prev = cursor;
-            cursor = cursor->next;
-        
-        }
 
+        //jezeli jest cos na liscie
         if(cursor != NULL){
-            int return_value = cursor->value;
-        
-            if(return_value == -1){
-                // na liscie jest tylko glowa
-                // zgodnie z zalozeniem nie usuwam
-                return -1; 
-            }else{
+        // przejscie na koniec listy
+            while(cursor->next){
+                prev = cursor;
+                cursor = cursor->next;
+            
+            }
+
+            if(cursor != NULL){
+                int return_value = cursor->value;
+            
+                    
+                        free(cursor);
+                        cursor = NULL;
+                        prev->next = NULL; // SUPER WAZNE 
+                    return return_value;
                 
-                    free(cursor);
-                    cursor = NULL;
-                    prev->next = NULL; // SUPER WAZNE 
-                return return_value;
             }
         }
+        return -1;
 }
 
 // wraper sciagania z listy na potrzeby tworzenia watku
@@ -95,7 +96,9 @@ void* popThread(void  *arg){
     while(1){
         sem_wait(&sem);
         pthread_mutex_lock(&mutex);
-            printf("watek wlasnie zdjal: %d\n", pop_f(k));
+            // printf("watek wlasnie zdjal: %d\n", pop_f(k));
+            pop_f(k);
+            display(lista);
         pthread_mutex_unlock(&mutex);
         sleep(3);
     }
@@ -109,8 +112,9 @@ void* pushThread(void *arg){
     while(1){
         val = rand()%100;
         pthread_mutex_lock(&mutex);
-            printf("watek wlasnie wlozyl: %d\n", val );
+            // printf("watek wlasnie wlozyl: %d\n", val );
             push_f(k, val );
+            display(lista);
         pthread_mutex_unlock(&mutex);
         
         sem_post(&sem);
@@ -126,7 +130,7 @@ void* pushThread(void *arg){
 int main(){
 
 
-    struct List *lista;
+    
     sem_t sem;
     pthread_t tid[threds_num];
     sem_init(&sem, 0, 0);
