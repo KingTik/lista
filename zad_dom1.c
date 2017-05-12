@@ -5,13 +5,6 @@
 #include <unistd.h>
 
 
-/**
-glowa jest z wartoscia -1
-nie mozna usunac glowy
-
-
-*/
-
 #define threds_num 3
 
 //Node
@@ -42,51 +35,65 @@ void display(struct List *element){
 }
 
 //wstawienie elementu na koniec listy
-void push_f(struct List *head, int value){
+void push_f(int value){
     struct List *newElement;
-    struct List *cursor = head;
+    struct List *cursor = lista;
     newElement = (struct List*)malloc(sizeof(struct List));
     newElement->value = value;
+    newElement->next = NULL;
     
-    // przejscie na koniec listy
-    while(cursor->next){
-        
-        cursor = cursor->next;
-    }
+    if(lista == NULL){
+        lista = newElement;
+    }else{
 
-    cursor->next = newElement;
-    
+        // przejscie na koniec listy
+        while(cursor->next){
+            
+            cursor = cursor->next;
+        }
+
+        cursor->next = newElement;
+    }
 }
 //sciagniecie elementu z konca listy
-int pop_f(struct List *head){
+// int pop_f_old(struct List *head){
 
     
-        struct List *cursor = head;
-        struct List *prev;
+//         struct List *cursor = head;
+//         struct List *prev;
 
-        //jezeli jest cos na liscie
-        if(cursor != NULL){
-        // przejscie na koniec listy
-            while(cursor->next){
-                prev = cursor;
-                cursor = cursor->next;
+//         //jezeli jest cos na liscie
+//         if(cursor != NULL){
+//         // przejscie na koniec listy
+//             while(cursor->next){
+//                 prev = cursor;
+//                 cursor = cursor->next;
             
-            }
+//             }
 
-            if(cursor != NULL){
-                int return_value = cursor->value;
+//             if(cursor != NULL){
+//                 int return_value = cursor->value;
             
                     
-                        free(cursor);
-                        cursor = NULL;
-                        prev->next = NULL; // SUPER WAZNE 
-                    return return_value;
+//                         free(cursor);
+//                         cursor = NULL;
+//                         prev->next = NULL; // SUPER WAZNE 
+//                     return return_value;
                 
-            }
-        }
-        return -1;
-}
+//             }
+//         }
+//         return -1;
+// }
 
+int pop_f(){
+
+    if (lista != NULL){
+        struct List *cursor = lista->next;
+        free(lista);
+        lista = cursor;
+    }
+
+}
 // wraper sciagania z listy na potrzeby tworzenia watku
 void* popThread(void  *arg){
     
@@ -97,7 +104,7 @@ void* popThread(void  *arg){
         sem_wait(&sem);
         pthread_mutex_lock(&mutex);
             // printf("watek wlasnie zdjal: %d\n", pop_f(k));
-            pop_f(k);
+            pop_f();
             display(lista);
         pthread_mutex_unlock(&mutex);
         sleep(3);
@@ -106,14 +113,14 @@ void* popThread(void  *arg){
 // wraper sciagania z listy na potrzeby tworzenia watku
 void* pushThread(void *arg){
     
-    int i=0;
+    
     int val ;
-    struct List *k = (struct List*) arg;
+    
     while(1){
         val = rand()%100;
         pthread_mutex_lock(&mutex);
             // printf("watek wlasnie wlozyl: %d\n", val );
-            push_f(k, val );
+            push_f( val );
             display(lista);
         pthread_mutex_unlock(&mutex);
         
