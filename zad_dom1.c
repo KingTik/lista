@@ -27,7 +27,7 @@ void display(struct List *element){
     while(element){
         
         if(element->value){
-            printf("%d, ", element->value)
+            printf("%d, ", element->value);
         }
         element = element->next;
     }
